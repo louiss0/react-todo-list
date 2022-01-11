@@ -1,0 +1,56 @@
+version: "3.8"
+
+services:
+  
+  server:
+
+    ports: 
+
+      - "3000:3000"
+    
+    build: 
+        
+        context: ./
+        
+        dockerfile: dockerfiles/server.dockerfile
+    
+    stdin_open: true
+
+    tty: true
+
+    env_file: 
+      
+      - ./env-files/.env.development
+
+    volumes: 
+  
+      - ./app:/app/
+      
+      - /app/node_modules/
+      
+      
+
+  npm: 
+      
+    build: 
+      
+      context: ./
+      
+      dockerfile: dockerfiles/npm.dockerfile
+
+    volumes: 
+
+      - ./app:/app:delegated
+
+  cra:
+
+    build: 
+      
+      context: ./
+      
+      dockerfile: dockerfiles/cra.dockerfile
+
+    volumes: 
+
+      - ./app:/app:delegated  
+
