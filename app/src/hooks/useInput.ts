@@ -7,10 +7,15 @@ export default function useInput(initValue = "") {
 		setValue(event.target.value)
 	}
 
+	function reset() {
+		setValue(initValue)
+	}
+
 	return {
 		get value() {
 			return value
 		},
 		handleChange,
+		reset,
 	}
 }
