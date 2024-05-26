@@ -1,10 +1,13 @@
-import { presetWind, presetIcons, defineConfig } from 'unocss';
+import { presetWind, presetIcons, transformerVariantGroup, defineConfig } from 'unocss';
 
 
 export default defineConfig({
     presets: [
         presetWind(),
         presetIcons(),
+    ],
+    transformers: [
+        transformerVariantGroup(),
     ],
     blocklist: [
         /^(?:(?:m|p|b)a-)/,
