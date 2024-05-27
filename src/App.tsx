@@ -58,6 +58,11 @@ function App() {
 			}),
 		);
 	};
+	const handleDeleteTodo = (payload: string): void => {
+		setTodoList((prevTodoList) =>
+			prevTodoList.filter((todo) => todo.id !== payload),
+		);
+	};
 	return (
 		<div data-wrapper="bg-reset" className="text-gray-900 bg-gray-50 h-screen">
 			<div
@@ -110,6 +115,7 @@ function App() {
 										todo={todo}
 										handleChangeText={changeTextInTodoList}
 										handleCheckTodo={handleCheckTodo}
+										handleDeleteTodo={handleDeleteTodo}
 									/>
 								))}
 							</div>
@@ -125,10 +131,11 @@ type TodoItemProps = {
 	todo: Todo;
 	handleChangeText: (payload: Omit<Todo, "complete">) => void;
 	handleCheckTodo: (payload: Omit<Todo, "text">) => void;
+	handleDeleteTodo: (payload: string) => void;
 };
 
 const TodoItem = (props: TodoItemProps) => {
-	const { todo, handleChangeText, handleCheckTodo } = props;
+	const { todo, handleChangeText, handleCheckTodo, handleDeleteTodo } = props;
 
 	const [editing, setEditing] = useState(false);
 	const [text, setText] = useState(todo.text);
@@ -187,7 +194,10 @@ const TodoItem = (props: TodoItemProps) => {
 						className="rounded-sm px-2"
 					/>
 				)}
-				<Button className="size-8 border rounded-full">
+				<Button
+					onClick={() => handleDeleteTodo(todo.id)}
+					className="size-8 border rounded-full"
+				>
 					<i className="inline-block i-mdi:close" />
 
 					<div className="sr-only">Close</div>
