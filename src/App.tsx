@@ -1,4 +1,4 @@
-import { type ComponentProps, useState, useRef } from "react";
+import { type ComponentProps, useState, useRef, useEffect } from "react";
 
 const combineStingsWithSpacesInBetween = (...args: Array<string>) =>
 	args.join(" ");
@@ -14,10 +14,11 @@ class Todo {
 }
 
 function App() {
-	const [todoList, setTodoList] = useState(() => [
-		new Todo("Clean my room"),
-		new Todo("Go to my Interview"),
-	]);
+	const [todoList, setTodoList] = useState(() => {
+		const storedTodoList = localStorage.getItem("todoList");
+
+		return storedTodoList ? (JSON.parse(storedTodoList) as Array<Todo>) : [];
+	});
 
 	const [text, setText] = useState("");
 
@@ -63,6 +64,11 @@ function App() {
 			prevTodoList.filter((todo) => todo.id !== payload),
 		);
 	};
+
+	useEffect(() => {
+		localStorage.setItem("todoList", JSON.stringify(todoList));
+	}, [todoList]);
+
 	return (
 		<div data-wrapper="bg-reset" className="text-gray-900 bg-gray-50 h-screen">
 			<div
