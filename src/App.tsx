@@ -125,6 +125,34 @@ function App() {
 									/>
 								))}
 							</div>
+							<div data-element="control-buttons" className="px-6 py-2">
+								<div className="flex justify-evenly items-center">
+									{[
+										{
+											text: "Clear Completed",
+											colorClass: "bg-blue-500",
+											handler: () => {
+												setTodoList((prevTodoList) =>
+													prevTodoList.filter((todo) => !todo.complete),
+												);
+											},
+										},
+										{
+											text: "Clear All",
+											colorClass: "bg-red-500",
+											handler: () => setTodoList([]),
+										},
+									].map((btnProps) => (
+										<Button
+											key={btnProps.text}
+											className={`rounded-sm px-3 py-1 ${btnProps.colorClass}`}
+											onClick={btnProps.handler}
+										>
+											{btnProps.text}
+										</Button>
+									))}
+								</div>
+							</div>
 						</div>
 					</div>
 				</div>
