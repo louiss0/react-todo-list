@@ -1,4 +1,4 @@
-import { type ComponentProps, useState } from "react";
+import { type ComponentProps, useState, useRef } from "react";
 
 const combineStingsWithSpacesInBetween = (...args: Array<string>) =>
 	args.join(" ");
@@ -18,6 +18,10 @@ function App() {
 		new Todo("Clean my room"),
 		new Todo("Go to my Interview"),
 	]);
+
+	const [text, setText] = useState("");
+
+	const addTextInputRef = useRef<HTMLInputElement>(null);
 
 	const changeTextInTodoList = ({
 		id,
@@ -52,12 +56,32 @@ function App() {
 						className="sm:w-4/5 p-4 rounded-md border-2 border-current"
 					>
 						<div data-content className="flex flex-col gap-4">
-							<form data-element="todo-list-form">
+							<form
+								data-element="todo-list-form"
+								onSubmit={(e) => {
+									e.preventDefault();
+									if (!text) return;
+									setTodoList((prevTodoList) => [
+										...prevTodoList,
+										new Todo(text),
+									]);
+									setText("");
+									addTextInputRef.current?.focus();
+								}}
+							>
 								<div
 									data-content
 									className="flex justify-between lg:justify-evenly items-center"
 								>
-									<input type="text" className="rounded-sm px-3 py-1" />
+									<input
+										value={text}
+										ref={addTextInputRef}
+										onChange={(e) => setText(e.target.value)}
+										type="text"
+										minLength={1}
+										maxLength={25}
+										className="rounded-sm px-3 py-1"
+									/>
 									<Button className="bg-blue-300 rounded-sm px-6 py-2">
 										Submit
 									</Button>
@@ -144,12 +168,11 @@ const TodoItem = (props: TodoItemProps) => {
 	);
 };
 
-type ButtonProps = Omit<ComponentProps<"button">, "type" | "form">;
+type ButtonProps = ComponentProps<"button">;
 
 const Button = ({ children, className, ...restProps }: ButtonProps) => {
 	return (
 		<button
-			type="button"
 			className={combineStingsWithSpacesInBetween(
 				"p-1",
 				"transition-transform duration-300 ease-in",
