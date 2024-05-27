@@ -7,7 +7,7 @@ class Todo {
 	public readonly id: string;
 	constructor(
 		public readonly text: string,
-		public readonly completed = false,
+		public readonly complete = false,
 	) {
 		this.id = Math.random().toString(16);
 	}
@@ -23,10 +23,7 @@ function App() {
 
 	const addTextInputRef = useRef<HTMLInputElement>(null);
 
-	const changeTextInTodoList = ({
-		id,
-		text,
-	}: Omit<Todo, "completed">): void => {
+	const changeTextInTodoList = ({ id, text }: Omit<Todo, "complete">): void => {
 		const todoListItemWithIdenticalIdInTodoListIndex = todoList.findIndex(
 			(item) => item.id === id,
 		);
@@ -35,7 +32,26 @@ function App() {
 				const foundIndexIsSameAsIndex =
 					todoListItemWithIdenticalIdInTodoListIndex === index;
 				if (foundIndexIsSameAsIndex) {
-					return new Todo(text, prevItem.completed);
+					return new Todo(text, prevItem.complete);
+				}
+
+				return prevItem;
+			}),
+		);
+	};
+	const handleCheckTodo = ({
+		complete: completed,
+		id,
+	}: Omit<Todo, "text">): void => {
+		const todoListItemWithIdenticalIdInTodoListIndex = todoList.findIndex(
+			(item) => item.id === id,
+		);
+		setTodoList((prevTodoList) =>
+			prevTodoList.map((prevItem, index) => {
+				const foundIndexIsSameAsIndex =
+					todoListItemWithIdenticalIdInTodoListIndex === index;
+				if (foundIndexIsSameAsIndex) {
+					return new Todo(prevItem.text, completed);
 				}
 
 				return prevItem;
@@ -93,6 +109,7 @@ function App() {
 										key={todo.id}
 										todo={todo}
 										handleChangeText={changeTextInTodoList}
+										handleCheckTodo={handleCheckTodo}
 									/>
 								))}
 							</div>
@@ -106,11 +123,12 @@ function App() {
 
 type TodoItemProps = {
 	todo: Todo;
-	handleChangeText(payload: Omit<Todo, "completed">): void;
+	handleChangeText: (payload: Omit<Todo, "complete">) => void;
+	handleCheckTodo: (payload: Omit<Todo, "text">) => void;
 };
 
 const TodoItem = (props: TodoItemProps) => {
-	const { todo, handleChangeText } = props;
+	const { todo, handleChangeText, handleCheckTodo } = props;
 
 	const [editing, setEditing] = useState(false);
 	const [text, setText] = useState(todo.text);
@@ -137,13 +155,24 @@ const TodoItem = (props: TodoItemProps) => {
 				data-content
 				className="flex justify-between lg:justify-evenly items-center"
 			>
-				<Button className="size-8 border rounded-full">
+				<Button
+					className="size-8 border rounded-full"
+					type="button"
+					onClick={() =>
+						handleCheckTodo({ id: todo.id, complete: !todo.complete })
+					}
+				>
 					<i className="inline-block i-mdi:check" />
 
-					<div className="sr-only">Check</div>
+					<div className="sr-only">Check Todo</div>
 				</Button>
 				{!editing && (
-					<button type="button" onClick={() => setEditing(true)}>
+					<button
+						type="button"
+						disabled={todo.complete}
+						className={`${todo.complete ? "text-red-600/50 line-through" : ""}`}
+						onClick={() => setEditing(true)}
+					>
 						{text}
 					</button>
 				)}
