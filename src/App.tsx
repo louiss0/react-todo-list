@@ -1,4 +1,11 @@
-import { type ComponentProps, useState, useRef, useEffect } from "react";
+import {
+	type ComponentProps,
+	useState,
+	useRef,
+	useEffect,
+	type Reducer,
+	useReducer,
+} from "react";
 
 const combineStingsWithSpacesInBetween = (...args: Array<string>) =>
 	args.join(" ");
@@ -13,62 +20,114 @@ class Todo {
 	}
 }
 
-function App() {
-	const [todoList, setTodoList] = useState(() => {
-		const storedTodoList = localStorage.getItem("todoList");
+type TodoListActionMap = {
+	create: Omit<Todo, "complete">;
+	check: Omit<Todo, "text">;
+	delete: string;
+	edit: Omit<Todo, "complete">;
+	clear_completed: undefined;
+	clear: undefined;
+};
+type TodoListActions = {
+	[K in keyof TodoListActionMap]: {
+		type: K;
+		payload: TodoListActionMap[K];
+	};
+}[keyof TodoListActionMap];
 
-		return storedTodoList ? (JSON.parse(storedTodoList) as Array<Todo>) : [];
-	});
+class TodoListAction<T extends keyof TodoListActionMap> {
+	constructor(
+		public readonly type: T,
+		public readonly payload: TodoListActionMap[T],
+	) {}
+}
+
+const todoListReducer: Reducer<Array<Todo>, TodoListActions> = (
+	state,
+	action,
+) => {
+	switch (action.type) {
+		case "create": {
+			return [new Todo(action.payload.text), ...state];
+		}
+
+		case "check": {
+			const todoListItemWithIdenticalIdInTodoListIndex = state.findIndex(
+				(item) => item.id === action.payload.id,
+			);
+
+			return state.map((prevItem, index) => {
+				const foundIndexIsSameAsIndex =
+					todoListItemWithIdenticalIdInTodoListIndex === index;
+
+				if (foundIndexIsSameAsIndex) {
+					return new Todo(prevItem.text, action.payload.complete);
+				}
+
+				return prevItem;
+			});
+		}
+
+		case "edit": {
+			const todoListItemWithIdenticalIdInTodoListIndex = state.findIndex(
+				(item) => item.id === action.payload.id,
+			);
+			return state.map((prevItem, index) => {
+				const foundIndexIsSameAsIndex =
+					todoListItemWithIdenticalIdInTodoListIndex === index;
+				if (foundIndexIsSameAsIndex) {
+					return new Todo(action.payload.text, prevItem.complete);
+				}
+
+				return prevItem;
+			});
+		}
+
+		case "delete": {
+			return state.filter((todo) => todo.id !== action.payload);
+		}
+
+		case "clear_completed": {
+			return state.filter((todo) => !todo.complete);
+		}
+
+		case "clear": {
+			return [];
+		}
+	}
+};
+
+const getTodoListFromLocalStorage = () => {
+	const storedTodoList = localStorage.getItem("todoList");
+
+	return storedTodoList ? (JSON.parse(storedTodoList) as Array<Todo>) : [];
+};
+function App() {
+	const [todoList, dispatch] = useReducer(
+		todoListReducer,
+		getTodoListFromLocalStorage(),
+	);
 
 	const [text, setText] = useState("");
 
 	const addTextInputRef = useRef<HTMLInputElement>(null);
 
-	const changeTextInTodoList = ({ id, text }: Omit<Todo, "complete">): void => {
-		const todoListItemWithIdenticalIdInTodoListIndex = todoList.findIndex(
-			(item) => item.id === id,
-		);
-		setTodoList((prevTodoList) =>
-			prevTodoList.map((prevItem, index) => {
-				const foundIndexIsSameAsIndex =
-					todoListItemWithIdenticalIdInTodoListIndex === index;
-				if (foundIndexIsSameAsIndex) {
-					return new Todo(text, prevItem.complete);
-				}
-
-				return prevItem;
-			}),
-		);
-	};
-	const handleCheckTodo = ({
-		complete: completed,
-		id,
-	}: Omit<Todo, "text">): void => {
-		const todoListItemWithIdenticalIdInTodoListIndex = todoList.findIndex(
-			(item) => item.id === id,
-		);
-		setTodoList((prevTodoList) =>
-			prevTodoList.map((prevItem, index) => {
-				const foundIndexIsSameAsIndex =
-					todoListItemWithIdenticalIdInTodoListIndex === index;
-				if (foundIndexIsSameAsIndex) {
-					return new Todo(prevItem.text, completed);
-				}
-
-				return prevItem;
-			}),
-		);
-	};
-	const handleDeleteTodo = (payload: string): void => {
-		setTodoList((prevTodoList) =>
-			prevTodoList.filter((todo) => todo.id !== payload),
-		);
-	};
-
 	useEffect(() => {
 		localStorage.setItem("todoList", JSON.stringify(todoList));
 	}, [todoList]);
 
+	const BUTTON_CONTROL_PROPS = Object.freeze([
+		{
+			text: "Clear Completed",
+			colorClass: "bg-blue-500",
+			handler: () => dispatch(new TodoListAction("clear_completed", undefined)),
+		},
+		{
+			text: "Clear All",
+			colorClass: "bg-red-500",
+			handler: () => dispatch(new TodoListAction("clear", undefined)),
+		},
+	]);
 	return (
 		<div data-wrapper="bg-reset" className="text-gray-900 bg-gray-50 h-screen">
 			<div
@@ -88,10 +147,7 @@ function App() {
 								onSubmit={(e) => {
 									e.preventDefault();
 									if (!text) return;
-									setTodoList((prevTodoList) => [
-										...prevTodoList,
-										new Todo(text),
-									]);
+									dispatch(new TodoListAction("create", new Todo(text)));
 									setText("");
 									addTextInputRef.current?.focus();
 								}}
@@ -119,30 +175,21 @@ function App() {
 									<TodoItem
 										key={todo.id}
 										todo={todo}
-										handleChangeText={changeTextInTodoList}
-										handleCheckTodo={handleCheckTodo}
-										handleDeleteTodo={handleDeleteTodo}
+										handleChangeText={(payload) =>
+											dispatch(new TodoListAction("edit", payload))
+										}
+										handleCheckTodo={(payload) =>
+											dispatch(new TodoListAction("check", payload))
+										}
+										handleDeleteTodo={(payload) =>
+											dispatch(new TodoListAction("delete", payload))
+										}
 									/>
 								))}
 							</div>
 							<div data-element="control-buttons" className="px-6 py-2">
 								<div className="flex justify-evenly items-center">
-									{[
-										{
-											text: "Clear Completed",
-											colorClass: "bg-blue-500",
-											handler: () => {
-												setTodoList((prevTodoList) =>
-													prevTodoList.filter((todo) => !todo.complete),
-												);
-											},
-										},
-										{
-											text: "Clear All",
-											colorClass: "bg-red-500",
-											handler: () => setTodoList([]),
-										},
-									].map((btnProps) => (
+									{BUTTON_CONTROL_PROPS.map((btnProps) => (
 										<Button
 											key={btnProps.text}
 											className={`rounded-sm px-3 py-1 ${btnProps.colorClass}`}
