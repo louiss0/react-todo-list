@@ -5,7 +5,9 @@ import {
 	useEffect,
 	type Reducer,
 	useReducer,
+	type ReactNode,
 } from "react";
+import { createPortal } from "react-dom";
 
 const combineStingsWithSpacesInBetween = (...args: Array<string>) =>
 	args.join(" ");
@@ -13,7 +15,8 @@ const combineStingsWithSpacesInBetween = (...args: Array<string>) =>
 class Todo {
 	public readonly id: string;
 	constructor(
-		public readonly text: string,
+		public readonly title: string,
+		public readonly details = "",
 		public readonly complete = false,
 	) {
 		this.id = Math.random().toString(16);
@@ -22,9 +25,10 @@ class Todo {
 
 type TodoListActionMap = {
 	create: Omit<Todo, "complete">;
-	check: Omit<Todo, "text">;
+	check: Omit<Todo, "title" | "details">;
 	delete: string;
-	edit: Omit<Todo, "complete">;
+	edit_title: Omit<Todo, "complete" | "details">;
+	edit_details: Omit<Todo, "complete" | "title">;
 	clear_completed: undefined;
 	clear: undefined;
 };
@@ -48,7 +52,7 @@ const todoListReducer: Reducer<Array<Todo>, TodoListActions> = (
 ) => {
 	switch (action.type) {
 		case "create": {
-			return [new Todo(action.payload.text), ...state];
+			return [new Todo(action.payload.title), ...state];
 		}
 
 		case "check": {
@@ -61,14 +65,18 @@ const todoListReducer: Reducer<Array<Todo>, TodoListActions> = (
 					todoListItemWithIdenticalIdInTodoListIndex === index;
 
 				if (foundIndexIsSameAsIndex) {
-					return new Todo(prevItem.text, action.payload.complete);
+					return new Todo(
+						prevItem.title,
+						prevItem.details,
+						action.payload.complete,
+					);
 				}
 
 				return prevItem;
 			});
 		}
 
-		case "edit": {
+		case "edit_title": {
 			const todoListItemWithIdenticalIdInTodoListIndex = state.findIndex(
 				(item) => item.id === action.payload.id,
 			);
@@ -76,7 +84,29 @@ const todoListReducer: Reducer<Array<Todo>, TodoListActions> = (
 				const foundIndexIsSameAsIndex =
 					todoListItemWithIdenticalIdInTodoListIndex === index;
 				if (foundIndexIsSameAsIndex) {
-					return new Todo(action.payload.text, prevItem.complete);
+					return new Todo(
+						action.payload.title,
+						prevItem.details,
+						prevItem.complete,
+					);
+				}
+
+				return prevItem;
+			});
+		}
+		case "edit_details": {
+			const todoListItemWithIdenticalIdInTodoListIndex = state.findIndex(
+				(item) => item.id === action.payload.id,
+			);
+			return state.map((prevItem, index) => {
+				const foundIndexIsSameAsIndex =
+					todoListItemWithIdenticalIdInTodoListIndex === index;
+				if (foundIndexIsSameAsIndex) {
+					return new Todo(
+						prevItem.title,
+						action.payload.details,
+						prevItem.complete,
+					);
 				}
 
 				return prevItem;
@@ -102,34 +132,69 @@ const getTodoListFromLocalStorage = () => {
 
 	return storedTodoList ? (JSON.parse(storedTodoList) as Array<Todo>) : [];
 };
+
 function App() {
 	const [todoList, dispatch] = useReducer(
 		todoListReducer,
 		getTodoListFromLocalStorage(),
 	);
 
-	const [text, setText] = useState("");
-
-	const addTextInputRef = useRef<HTMLInputElement>(null);
-
 	useEffect(() => {
 		localStorage.setItem("todoList", JSON.stringify(todoList));
 	}, [todoList]);
 
+	const [title, setTitle] = useState("");
+
+	const [openModal, setOpenModal] = useState<"yes" | "no">("no");
+
+	const [openPrompt, setOpenPrompt] = useState<"yes" | "no">("no");
+
+	const addTitleInputRef = useRef<HTMLInputElement>(null);
+
 	const BUTTON_CONTROL_PROPS = Object.freeze([
 		{
-			text: "Clear Completed",
+			title: "Clear Completed",
 			colorClass: "bg-blue-500",
 			handler: () => dispatch(new TodoListAction("clear_completed", undefined)),
 		},
 		{
-			text: "Clear All",
+			title: "Clear All",
 			colorClass: "bg-red-500",
 			handler: () => dispatch(new TodoListAction("clear", undefined)),
 		},
 	]);
+
 	return (
 		<div data-wrapper="bg-reset" className="text-gray-900 bg-gray-50 h-screen">
+			{openPrompt && (
+				<TodoDetailPrompt
+					handleClose={(answer) => {
+						setOpenPrompt("no");
+
+						if (!answer || answer === "no") {
+							return dispatch(new TodoListAction("create", new Todo(title)));
+						}
+
+						setOpenModal("yes");
+					}}
+				/>
+			)}
+
+			{openModal && (
+				<TodoDetailsModal
+					modalTitle="Add Details"
+					details={""}
+					handleClose={({ answer, details }) => {
+						if (!answer) {
+							return;
+						}
+						dispatch(new TodoListAction("create", new Todo(title, details)));
+						setTitle("");
+						setOpenModal("no");
+						addTitleInputRef.current?.focus();
+					}}
+				/>
+			)}
 			<div
 				data-element="todo-list-app"
 				className="mx-auto px-3 py-9 md:w-4/5 lg:w-3/5"
@@ -146,10 +211,7 @@ function App() {
 								data-element="todo-list-form"
 								onSubmit={(e) => {
 									e.preventDefault();
-									if (!text) return;
-									dispatch(new TodoListAction("create", new Todo(text)));
-									setText("");
-									addTextInputRef.current?.focus();
+									setOpenPrompt("yes");
 								}}
 							>
 								<div
@@ -157,15 +219,18 @@ function App() {
 									className="flex justify-between lg:justify-evenly items-center"
 								>
 									<input
-										value={text}
-										ref={addTextInputRef}
-										onChange={(e) => setText(e.target.value)}
-										type="text"
+										value={title}
+										ref={addTitleInputRef}
+										onChange={(e) => setTitle(e.target.value)}
+										type="title"
 										minLength={1}
 										maxLength={25}
 										className="rounded-sm px-3 py-1"
 									/>
-									<Button className="bg-blue-300 rounded-sm px-6 py-2">
+									<Button
+										type="submit"
+										className="bg-blue-300 rounded-sm px-6 py-2"
+									>
 										Submit
 									</Button>
 								</div>
@@ -175,8 +240,11 @@ function App() {
 									<TodoItem
 										key={todo.id}
 										todo={todo}
-										handleChangeText={(payload) =>
-											dispatch(new TodoListAction("edit", payload))
+										handleChangeTitle={(payload) =>
+											dispatch(new TodoListAction("edit_title", payload))
+										}
+										handleChangeDetails={(payload) =>
+											dispatch(new TodoListAction("edit_details", payload))
 										}
 										handleCheckTodo={(payload) =>
 											dispatch(new TodoListAction("check", payload))
@@ -191,11 +259,11 @@ function App() {
 								<div className="flex justify-evenly items-center">
 									{BUTTON_CONTROL_PROPS.map((btnProps) => (
 										<Button
-											key={btnProps.text}
+											key={btnProps.title}
 											className={`rounded-sm px-3 py-1 ${btnProps.colorClass}`}
 											onClick={btnProps.handler}
 										>
-											{btnProps.text}
+											{btnProps.title}
 										</Button>
 									))}
 								</div>
@@ -210,25 +278,32 @@ function App() {
 
 type TodoItemProps = {
 	todo: Todo;
-	handleChangeText: (payload: Omit<Todo, "complete">) => void;
-	handleCheckTodo: (payload: Omit<Todo, "text">) => void;
+	handleChangeTitle: (payload: TodoListActionMap["edit_title"]) => void;
+	handleChangeDetails: (payload: TodoListActionMap["edit_details"]) => void;
+	handleCheckTodo: (payload: TodoListActionMap["check"]) => void;
 	handleDeleteTodo: (payload: string) => void;
 };
 
 const TodoItem = (props: TodoItemProps) => {
-	const { todo, handleChangeText, handleCheckTodo, handleDeleteTodo } = props;
+	const {
+		todo,
+		handleChangeTitle,
+		handleCheckTodo,
+		handleDeleteTodo,
+		handleChangeDetails,
+	} = props;
 
 	const [editing, setEditing] = useState(false);
-	const [text, setText] = useState(todo.text);
+	const [title, setTitle] = useState(todo.title);
 
 	const handleBlur = () => {
 		setEditing(false);
 
-		if (!text) {
-			return setText(todo.text);
+		if (!title) {
+			return setTitle(todo.title);
 		}
 
-		handleChangeText({ id: todo.id, text });
+		handleChangeTitle({ id: todo.id, title });
 	};
 	const handleBlurWhenEnterKeyIsPressed = (
 		e: React.KeyboardEvent<HTMLInputElement>,
@@ -239,6 +314,15 @@ const TodoItem = (props: TodoItemProps) => {
 	};
 	return (
 		<div data-element="todo-item" className="py-3 px-6">
+			<TodoDetailsModal
+				modalTitle="Edit Details"
+				details={todo.details}
+				handleClose={({ answer, details }) => {
+					if (answer) {
+						handleChangeDetails({ id: todo.id, details });
+					}
+				}}
+			/>
 			<div
 				data-content
 				className="flex justify-between lg:justify-evenly items-center"
@@ -261,17 +345,17 @@ const TodoItem = (props: TodoItemProps) => {
 						className={`${todo.complete ? "text-red-600/50 line-through" : ""}`}
 						onClick={() => setEditing(true)}
 					>
-						{text}
+						{title}
 					</button>
 				)}
 				{editing && (
 					<input
-						value={text}
+						value={title}
 						ref={(el) => el?.focus()}
 						onBlur={handleBlur}
 						onKeyDown={handleBlurWhenEnterKeyIsPressed}
-						onChange={(e) => setText(e.target.value)}
-						type="text"
+						onChange={(e) => setTitle(e.target.value)}
+						type="title"
 						className="rounded-sm px-2"
 					/>
 				)}
@@ -306,5 +390,136 @@ const Button = ({ children, className, ...restProps }: ButtonProps) => {
 		</button>
 	);
 };
+
+type BodyPortalProps = {
+	children: ReactNode;
+	key?: string | null;
+};
+
+const BodyPortal = ({ children }: BodyPortalProps) => {
+	return createPortal(children, document.body);
+};
+
+type TodoDetailsModalProps = {
+	modalTitle: string;
+	details: string;
+	handleClose: (payload: {
+		answer: "finished" | undefined;
+		details: string;
+	}) => void;
+};
+
+function TodoDetailsModal({
+	modalTitle,
+	details: $details,
+	handleClose,
+}: TodoDetailsModalProps) {
+	const [details, setDetails] = useState($details);
+
+	const dialogRef = useRef<HTMLDialogElement | null>(null);
+
+	useEffect(() => {
+		if (dialogRef) {
+			dialogRef.current?.showModal();
+		}
+	}, []);
+
+	return (
+		<BodyPortal>
+			<dialog
+				onClose={(event) =>
+					handleClose({
+						answer: event.currentTarget.returnValue as Parameters<
+							typeof handleClose
+						>[0]["answer"],
+						details,
+					})
+				}
+				ref={dialogRef}
+				className="inset-0 w-3/5 max-w-xl max-w-lg rounded-md  backdrop:bg-gray-900/50"
+			>
+				<form method="dialog">
+					<header className="text-2xl text-center px-12 py-6">
+						<h2>{modalTitle}</h2>
+					</header>
+					<div className="grid place-items-center">
+						<textarea
+							required
+							minLength={2}
+							rows={10}
+							cols={20}
+							className="border-3 rounded-sm"
+							value={details}
+							onChange={(event) => setDetails(event.target.value)}
+							name="details"
+							id="details"
+						/>
+					</div>
+					<footer className="flex justify-end items-center px-6 py-4">
+						<Button
+							type="submit"
+							value="finished"
+							className="focus:ring-1 bg-green-400 rounded-full px-6 py-2"
+						>
+							Finish
+						</Button>
+					</footer>
+				</form>
+			</dialog>
+		</BodyPortal>
+	);
+}
+
+type TodoDetailPromptProps = {
+	handleClose: (answer: "yes" | "no" | undefined) => void;
+};
+
+function TodoDetailPrompt({ handleClose }: TodoDetailPromptProps) {
+	const dialogRef = useRef<HTMLDialogElement | null>(null);
+
+	useEffect(() => {
+		if (dialogRef) {
+			dialogRef.current?.showModal();
+		}
+	}, []);
+
+	return (
+		<BodyPortal>
+			<dialog
+				onClose={(event) =>
+					handleClose(
+						event.currentTarget.returnValue as Parameters<
+							typeof handleClose
+						>[0],
+					)
+				}
+				className="m-0 px-6 py-3 absolute z-10 top-6 left-1/2 -translate-x-1/2  rounded-md backdrop:bg-gray-900/50"
+				ref={dialogRef}
+			>
+				<form method="dialog" className="space-y-6">
+					<header className="text-xl font-bold">
+						Do you want to add details?
+					</header>
+					<footer className="flex justify-center items-center gap-6">
+						<Button
+							value="yes"
+							type="submit"
+							className="rounded-full px-6 py-2 bg-green-400"
+						>
+							Yes
+						</Button>
+						<Button
+							value="no"
+							type="submit"
+							className="rounded-full px-6 py-2 bg-red-400"
+						>
+							No
+						</Button>
+					</footer>
+				</form>
+			</dialog>
+		</BodyPortal>
+	);
+}
 
 export default App;
