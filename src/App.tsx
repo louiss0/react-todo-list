@@ -400,12 +400,19 @@ const BodyPortal = ({ children }: BodyPortalProps) => {
 };
 
 type TodoDetailsModalProps = {
-	modalTitle: string;
+	title: string;
 	details: string;
-	handleClose: (payload: {
-		answer: "finished" | undefined;
-		details: string;
-	}) => void;
+	handleClose: (
+		payload:
+			| {
+				answer: "finished";
+				details: string;
+			}
+			| {
+				answer: undefined;
+				details: undefined;
+			},
+	) => void;
 };
 
 function TodoDetailsModal({
@@ -426,14 +433,13 @@ function TodoDetailsModal({
 	return (
 		<BodyPortal>
 			<dialog
-				onClose={(event) =>
-					handleClose({
-						answer: event.currentTarget.returnValue as Parameters<
-							typeof handleClose
-						>[0]["answer"],
-						details,
-					})
-				}
+				onClose={(event) => {
+					const { returnValue } = event.currentTarget;
+					if (returnValue === "finished") {
+						return handleClose({ answer: returnValue, details });
+					}
+					return handleClose({ answer: undefined, details: undefined });
+				}}
 				ref={dialogRef}
 				className="inset-0 w-3/5 max-w-xl max-w-lg rounded-md  backdrop:bg-gray-900/50"
 			>
