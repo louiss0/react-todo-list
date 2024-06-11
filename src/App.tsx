@@ -409,7 +409,7 @@ type TodoDetailsModalProps = {
 };
 
 function TodoDetailsModal({
-	modalTitle,
+	title,
 	details: $details,
 	handleClose,
 }: TodoDetailsModalProps) {
@@ -439,7 +439,7 @@ function TodoDetailsModal({
 			>
 				<form method="dialog">
 					<header className="text-2xl text-center px-12 py-6">
-						<h2>{modalTitle}</h2>
+						<h2>{title}</h2>
 					</header>
 					<div className="grid place-items-center">
 						<textarea
