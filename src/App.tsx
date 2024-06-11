@@ -14,7 +14,7 @@ const combineStingsWithSpacesInBetween = (...args: Array<string>) =>
 
 class Todo {
 	public readonly id: string;
-	constructor(
+	constructor (
 		public readonly title: string,
 		public readonly details = "",
 		public readonly complete = false,
@@ -40,7 +40,7 @@ type TodoListActions = {
 }[keyof TodoListActionMap];
 
 class TodoListAction<T extends keyof TodoListActionMap> {
-	constructor(
+	constructor (
 		public readonly type: T,
 		public readonly payload: TodoListActionMap[T],
 	) { }
@@ -194,6 +194,7 @@ function App() {
 					}}
 				/>
 			)}
+
 			<div
 				data-element="todo-list-app"
 				className="mx-auto px-3 py-9 md:w-4/5 lg:w-3/5"
@@ -221,7 +222,7 @@ function App() {
 										value={title}
 										ref={addTitleInputRef}
 										onChange={(e) => setTitle(e.target.value)}
-										type="title"
+										type="text"
 										minLength={1}
 										maxLength={25}
 										className="rounded-sm px-3 py-1"
@@ -234,7 +235,7 @@ function App() {
 									</Button>
 								</div>
 							</form>
-							<div data-element="todo-list ">
+							<div data-element="todo-list" className="min-h-76">
 								{todoList.map((todo) => (
 									<TodoItem
 										key={todo.id}
@@ -503,6 +504,7 @@ function TodoDetailPrompt({ handleClose }: TodoDetailPromptProps) {
 	return (
 		<BodyPortal>
 			<dialog
+				className="m-0 px-6 py-3 absolute z-10 top-6 left-1/2 -translate-x-1/2  rounded-md backdrop:bg-gray-900/50"
 				onClose={(event) =>
 					handleClose(
 						event.currentTarget.returnValue as Parameters<
@@ -510,7 +512,6 @@ function TodoDetailPrompt({ handleClose }: TodoDetailPromptProps) {
 						>[0],
 					)
 				}
-				className="m-0 px-6 py-3 absolute z-10 top-6 left-1/2 -translate-x-1/2  rounded-md backdrop:bg-gray-900/50"
 				ref={dialogRef}
 			>
 				<form method="dialog" className="space-y-6">
