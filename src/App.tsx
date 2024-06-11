@@ -43,7 +43,7 @@ class TodoListAction<T extends keyof TodoListActionMap> {
 	constructor(
 		public readonly type: T,
 		public readonly payload: TodoListActionMap[T],
-	) {}
+	) { }
 }
 
 const todoListReducer: Reducer<Array<Todo>, TodoListActions> = (
@@ -181,7 +181,7 @@ function App() {
 
 			{openModal === "yes" && (
 				<TodoDetailsModal
-					modalTitle="Add Details"
+					title="Add Details"
 					details={""}
 					handleClose={({ answer, details }) => {
 						if (!answer) {
@@ -314,7 +314,7 @@ const TodoItem = (props: TodoItemProps) => {
 	return (
 		<div data-element="todo-item" className="py-3 px-6">
 			<TodoDetailsModal
-				modalTitle="Edit Details"
+				title="Edit Details"
 				details={todo.details}
 				handleClose={({ answer, details }) => {
 					if (answer) {
