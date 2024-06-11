@@ -166,11 +166,10 @@ function App() {
 
 	return (
 		<div data-wrapper="bg-reset" className="text-gray-900 bg-gray-50 h-screen">
-			{openPrompt && (
+			{openPrompt === "yes" && (
 				<TodoDetailPrompt
 					handleClose={(answer) => {
 						setOpenPrompt("no");
-
 						if (!answer || answer === "no") {
 							return dispatch(new TodoListAction("create", new Todo(title)));
 						}
@@ -180,7 +179,7 @@ function App() {
 				/>
 			)}
 
-			{openModal && (
+			{openModal === "yes" && (
 				<TodoDetailsModal
 					modalTitle="Add Details"
 					details={""}
