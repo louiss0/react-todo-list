@@ -292,11 +292,12 @@ const TodoItem = (props: TodoItemProps) => {
 		handleChangeDetails,
 	} = props;
 
-	const [editing, setEditing] = useState(false);
+	const [editingTitle, setEditingTitle] = useState(false);
+	const [editingDetails, setEditingDetails] = useState(false);
 	const [title, setTitle] = useState(todo.title);
 
 	const handleBlur = () => {
-		setEditing(false);
+		setEditingTitle(false);
 
 		if (!title) {
 			return setTitle(todo.title);
@@ -313,15 +314,17 @@ const TodoItem = (props: TodoItemProps) => {
 	};
 	return (
 		<div data-element="todo-item" className="py-3 px-6">
-			<TodoDetailsModal
+			{editingDetails && <TodoDetailsModal
 				title="Edit Details"
 				details={todo.details}
 				handleClose={({ answer, details }) => {
+					setEditingDetails(false)
 					if (answer) {
 						handleChangeDetails({ id: todo.id, details });
 					}
+
 				}}
-			/>
+			/>}
 			<div
 				data-content
 				className="flex justify-between lg:justify-evenly items-center"
@@ -337,17 +340,25 @@ const TodoItem = (props: TodoItemProps) => {
 
 					<div className="sr-only">Check Todo</div>
 				</Button>
-				{!editing && (
+
+				{!editingTitle && (
 					<button
 						type="button"
 						disabled={todo.complete}
 						className={`${todo.complete ? "text-red-600/50 line-through" : ""}`}
-						onClick={() => setEditing(true)}
+						onClick={(event) => {
+							if (event.altKey) {
+								return setEditingDetails(true)
+							}
+							setEditingTitle(true)
+						}}
+
 					>
 						{title}
 					</button>
 				)}
-				{editing && (
+
+				{editingTitle && (
 					<input
 						value={title}
 						ref={(el) => el?.focus()}
@@ -358,6 +369,7 @@ const TodoItem = (props: TodoItemProps) => {
 						className="rounded-sm px-2"
 					/>
 				)}
+
 				<Button
 					onClick={() => handleDeleteTodo(todo.id)}
 					className="size-8 border rounded-full"
